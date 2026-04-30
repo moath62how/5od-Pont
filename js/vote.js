@@ -5,6 +5,22 @@
 
 const Vote = {
     /**
+     * Load all users into the dropdown
+     */
+    async loadUsers() {
+        const users = await db.getUsers();
+        const select = Utils.$("targetUser");
+
+        if (!select || !users) return;
+
+        select.innerHTML = '<option value="">اختر اللاعب المستهدف...</option>';
+
+        users.forEach(u => {
+            select.innerHTML += `<option value="${u.id}">${Utils.escapeHtml(u.name)}</option>`;
+        });
+    },
+
+    /**
      * Create a new vote
      */
     async createVote() {
@@ -20,18 +36,22 @@ const Vote = {
 
         const titleInput = Utils.$("title");
         const fileInput = Utils.$("file");
+        const targetUserSelect = Utils.$("targetUser");
 
         console.log("Title input:", titleInput);
         console.log("File input:", fileInput);
+        console.log("Target user select:", targetUserSelect);
 
         const title = titleInput?.value;
         const file = fileInput?.files[0];
+        const targetUserId = targetUserSelect?.value;
 
         console.log("Title:", title);
         console.log("File:", file);
+        console.log("Target User ID:", targetUserId);
 
-        if (!title || !file) {
-            Utils.showMsg("الرجاء ملء جميع الحقول", "red");
+        if (!title || !file || !targetUserId) {
+            Utils.showMsg("الرجاء ملء جميع الحقول واختيار اللاعب المستهدف", "red");
             return;
         }
 
@@ -61,7 +81,8 @@ const Vote = {
                 title,
                 image_path: path,
                 created_by: user.id,
-                end_time: new Date(Date.now() + 600000),
+                target_user_id: targetUserId,
+                end_time: new Date(Date.now() + 600000), // 10 minutes
                 is_deleted: false
             });
 
@@ -76,6 +97,7 @@ const Vote = {
         Utils.vibrate(100);
         titleInput.value = "";
         fileInput.value = "";
+        targetUserSelect.value = "";
         await this.load();
     },
 
@@ -85,7 +107,7 @@ const Vote = {
     async load() {
         const { data: votes } = await db.instance
             .from("votes")
-            .select("*")
+            .select("*, target_user:target_user_id(name)")
             .eq("is_deleted", false)
             .order("created_at", { ascending: false });
 
@@ -106,20 +128,50 @@ const Vote = {
 
             const withCount = await this.getCount(v.id, 'with');
             const againstCount = await this.getCount(v.id, 'against');
+            const totalVotes = withCount + againstCount;
+            const targetUserName = v.target_user?.name || 'غير معروف';
+
+            // Check if voting has ended
+            const hasEnded = new Date(v.end_time) < new Date();
+            const timeLeft = this.getTimeLeft(v.end_time);
 
             container.innerHTML += `
                 <div class="bg-white/10 p-4 rounded-xl max-w-md mx-auto">
                     <img src="${url}" class="rounded mb-3 w-full h-96 object-cover" alt="${Utils.escapeHtml(v.title)}">
-                    <h2 class="text-lg mb-3 font-bold">${Utils.escapeHtml(v.title)}</h2>
+                    <h2 class="text-lg mb-2 font-bold">${Utils.escapeHtml(v.title)}</h2>
+                    <p class="text-sm text-blue-400 mb-3">
+                        <i class="fas fa-user"></i> اللاعب المستهدف: ${Utils.escapeHtml(targetUserName)}
+                    </p>
                     
-                    <div class="flex gap-2 mb-3">
-                        <button onclick="Vote.cast('${v.id}', 'with')" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition">
-                            بونط <i class="fas fa-thumbs-up"></i>
-                        </button>
-                        <button onclick="Vote.cast('${v.id}', 'against')" class="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition">
-                            احبنه <i class="fas fa-thumbs-down"></i>
-                        </button>
-                    </div>
+                    ${hasEnded ? `
+                        <div class="bg-gray-700 p-3 rounded mb-3">
+                            <p class="text-center text-yellow-400 font-bold">
+                                <i class="fas fa-clock"></i> انتهى التصويت
+                            </p>
+                            ${totalVotes > 0 ? `
+                                <p class="text-center mt-2">
+                                    ${withCount > againstCount ?
+                            '<span class="text-green-400">✓ فاز "بونط"</span>' :
+                            withCount < againstCount ?
+                                '<span class="text-red-400">✓ فاز "احبنه"</span>' :
+                                '<span class="text-gray-400">تعادل</span>'
+                        }
+                                </p>
+                            ` : ''}
+                        </div>
+                    ` : `
+                        <div class="flex gap-2 mb-3">
+                            <button onclick="Vote.cast('${v.id}', 'with')" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition">
+                                بونط <i class="fas fa-thumbs-up"></i>
+                            </button>
+                            <button onclick="Vote.cast('${v.id}', 'against')" class="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition">
+                                احبنه <i class="fas fa-thumbs-down"></i>
+                            </button>
+                        </div>
+                        <p class="text-center text-sm text-gray-400 mb-2">
+                            <i class="fas fa-hourglass-half"></i> ${timeLeft}
+                        </p>
+                    `}
                     
                     <div class="flex justify-between text-sm text-gray-300">
                         <p class="text-green-400">بونط: ${withCount}</p>
@@ -131,12 +183,41 @@ const Vote = {
     },
 
     /**
+     * Get time left for voting
+     */
+    getTimeLeft(endTime) {
+        const now = new Date();
+        const end = new Date(endTime);
+        const diff = end - now;
+
+        if (diff <= 0) return "انتهى";
+
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+
+        return `${minutes}:${seconds.toString().padStart(2, '0')} متبقي`;
+    },
+
+    /**
      * Cast a vote
      */
     async cast(voteId, choice) {
         const user = await db.getUser();
         if (!user) {
             Utils.showMsg("الرجاء تسجيل الدخول أولاً", "red");
+            return;
+        }
+
+        // Check if vote has ended
+        const { data: vote } = await db.instance
+            .from("votes")
+            .select("end_time")
+            .eq("id", voteId)
+            .single();
+
+        if (vote && new Date(vote.end_time) < new Date()) {
+            Utils.showMsg("انتهى وقت التصويت!", "red");
+            await this.load();
             return;
         }
 
@@ -156,6 +237,41 @@ const Vote = {
         Utils.showMsg("تم التصويت بنجاح!", "green");
         Utils.vibrate(50);
         await this.load();
+    },
+
+    /**
+     * Check and award points for ended votes
+     */
+    async checkAndAwardPoints(voteId) {
+        const { data: vote } = await db.instance
+            .from("votes")
+            .select("*")
+            .eq("id", voteId)
+            .single();
+
+        if (!vote || !vote.target_user_id) return;
+
+        // Check if vote has ended
+        if (new Date(vote.end_time) > new Date()) return;
+
+        const withCount = await this.getCount(voteId, 'with');
+        const againstCount = await this.getCount(voteId, 'against');
+
+        // Award point if "with" wins
+        if (withCount > againstCount) {
+            const { data: targetUser } = await db.instance
+                .from("users")
+                .select("points")
+                .eq("id", vote.target_user_id)
+                .single();
+
+            if (targetUser) {
+                await db.instance
+                    .from("users")
+                    .update({ points: targetUser.points + 1 })
+                    .eq("id", vote.target_user_id);
+            }
+        }
     },
 
     /**

@@ -41,7 +41,13 @@
 
     <!-- CREATE VOTE -->
     <div class="bg-white/10 p-4 rounded-xl mb-6">
+        <h3 class="text-xl font-bold mb-3">إنشاء تصويت جديد</h3>
+
         <input id="title" placeholder="عنوان التصويت" class="w-full p-2 mb-2 rounded bg-black/50 text-white">
+
+        <select id="targetUser" class="w-full p-2 mb-2 rounded bg-black/50 text-white">
+            <option value="">اختر اللاعب المستهدف...</option>
+        </select>
 
         <input id="file" type="file" accept="image/*" class="w-full mb-2 text-gray-300">
 
@@ -62,6 +68,7 @@
             const user = await Auth.requireAuth();
             if (!user) return;
 
+            await Vote.loadUsers();
             await Vote.load();
 
             // Hide loader
