@@ -8,22 +8,37 @@ const Vote = {
      * Create a new vote
      */
     async createVote() {
+        console.log("createVote called");
+
         const user = await db.getUser();
+        console.log("User:", user);
+
         if (!user) {
-            Utils.showMsg("Please login first", "red");
+            Utils.showMsg("الرجاء تسجيل الدخول أولاً", "red");
             return;
         }
 
-        const title = Utils.$("title").value;
-        const file = Utils.$("file").files[0];
+        const titleInput = Utils.$("title");
+        const fileInput = Utils.$("file");
+
+        console.log("Title input:", titleInput);
+        console.log("File input:", fileInput);
+
+        const title = titleInput?.value;
+        const file = fileInput?.files[0];
+
+        console.log("Title:", title);
+        console.log("File:", file);
 
         if (!title || !file) {
-            Utils.showMsg("Fill all fields", "red");
+            Utils.showMsg("الرجاء ملء جميع الحقول", "red");
             return;
         }
 
         const voteId = crypto.randomUUID();
         const path = `votes/${voteId}/${file.name}`;
+
+        console.log("Uploading to:", path);
 
         // Upload image
         const { error: uploadError } = await db.instance.storage
@@ -31,9 +46,12 @@ const Vote = {
             .upload(path, file);
 
         if (uploadError) {
-            Utils.showMsg("Upload failed: " + uploadError.message, "red");
+            console.error("Upload error:", uploadError);
+            Utils.showMsg("فشل الرفع: " + uploadError.message, "red");
             return;
         }
+
+        console.log("Upload successful, inserting vote...");
 
         // Insert vote
         const { error } = await db.instance
@@ -48,13 +66,16 @@ const Vote = {
             });
 
         if (error) {
-            Utils.showMsg("Error: " + error.message, "red");
+            console.error("Insert error:", error);
+            Utils.showMsg("خطأ: " + error.message, "red");
             return;
         }
 
+        console.log("Vote created successfully!");
+        Utils.showMsg("تم إنشاء التصويت بنجاح!", "green");
         Utils.vibrate(100);
-        Utils.$("title").value = "";
-        Utils.$("file").value = "";
+        titleInput.value = "";
+        fileInput.value = "";
         await this.load();
     },
 
@@ -74,7 +95,7 @@ const Vote = {
         container.innerHTML = "";
 
         if (!votes || votes.length === 0) {
-            container.innerHTML = '<p class="text-center text-gray-400">No votes yet</p>';
+            container.innerHTML = '<p class="text-center text-gray-400">لا توجد تصويتات حتى الآن</p>';
             return;
         }
 
@@ -89,10 +110,10 @@ const Vote = {
                 <div class="bg-white/10 p-4 rounded-xl">
                     <img src="${url}" class="rounded mb-2 w-full h-48 object-cover" alt="${Utils.escapeHtml(v.title)}">
                     <h2 class="text-lg mb-2">${Utils.escapeHtml(v.title)}</h2>
-                    <button onclick="Vote.cast('${v.id}')" class="bg-green-600 hover:bg-green-700 px-4 py-1 rounded transition">
-                        Vote <i class="fas fa-heart"></i>
+                    <button onclick="Vote.cast('${v.id}')" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition">
+                        تصويت <i class="fas fa-heart"></i>
                     </button>
-                    <p class="mt-2 text-sm text-gray-300">Votes: ${count}</p>
+                    <p class="mt-2 text-sm text-gray-300">عدد الأصوات: ${count}</p>
                 </div>
             `;
         }
@@ -104,7 +125,7 @@ const Vote = {
     async cast(voteId) {
         const user = await db.getUser();
         if (!user) {
-            Utils.showMsg("Please login first", "red");
+            Utils.showMsg("الرجاء تسجيل الدخول أولاً", "red");
             return;
         }
 
@@ -116,10 +137,11 @@ const Vote = {
             });
 
         if (error) {
-            Utils.showMsg("Already voted!", "red");
+            Utils.showMsg("لقد صوّت بالفعل!", "red");
             return;
         }
 
+        Utils.showMsg("تم التصويت بنجاح!", "green");
         Utils.vibrate(50);
         await this.load();
     },

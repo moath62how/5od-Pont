@@ -33,13 +33,16 @@
 
     <!-- CREATE VOTE -->
     <div class="bg-white/10 p-4 rounded-xl mb-6">
-        <input id="title" placeholder="عنوان التصويت" class="w-full p-2 mb-2 rounded bg-black/50">
+        <input id="title" placeholder="عنوان التصويت" class="w-full p-2 mb-2 rounded bg-black/50 text-white">
 
-        <input id="file" type="file" class="w-full mb-2 text-gray-300">
+        <input id="file" type="file" accept="image/*" class="w-full mb-2 text-gray-300">
 
         <button onclick="Vote.createVote()" class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded transition">
-            إنشاء تصويت
+            إنشاء تصويت <i class="fas fa-plus"></i>
         </button>
+
+        <!-- Message container -->
+        <div id="msg" class="mt-2"></div>
     </div>
 
     <!-- VOTES LIST -->
