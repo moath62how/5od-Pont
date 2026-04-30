@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+
+    <!-- Tailwind CSS -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- GSAP Animations -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <!-- Supabase JS -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+</head>
+
+<body
+    class="bg-gradient-to-br from-black via-gray-900 to-black text-white flex items-center justify-center min-h-screen">
+
+    <div id="card" class="bg-white/10 backdrop-blur-xl p-6 rounded-2xl w-full max-w-sm shadow-2xl">
+
+        ```
+        <h1 class="text-2xl font-bold text-center mb-5">🔥 Login</h1>
+
+        <!-- Email -->
+        <input id="email" type="email" placeholder="Email"
+            class="w-full p-3 mb-3 rounded-lg bg-black/50 focus:outline-none focus:ring-2 focus:ring-purple-500">
+
+        <!-- Password -->
+        <input id="password" type="password" placeholder="Password"
+            class="w-full p-3 mb-4 rounded-lg bg-black/50 focus:outline-none focus:ring-2 focus:ring-purple-500">
+
+        <!-- Login -->
+        <button onclick="login()" class="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-xl transition">
+            Login
+        </button>
+
+        <!-- Signup -->
+        <button onclick="signup()" class="w-full mt-2 bg-gray-700 hover:bg-gray-800 p-3 rounded-xl transition">
+            Create Account
+        </button>
+
+        <!-- Message -->
+        <p id="msg" class="text-center mt-4 text-sm"></p>
+        ```
+
+    </div>
+
+    <script>
+        /* =========================
+           🔧 CONFIG
+        ========================= */
+        const supabase = supabase.createClient(
+            "https://pfjknmkpfpnlrqjiwkan.supabase.co",
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmamtubWtwZnBubHJxaml3a2FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzY1ODUsImV4cCI6MjA5MDY1MjU4NX0.MivoUcReqSyKgecIhvQX3UTQswO52xzDXnMqoHCH6AA"
+        )
+
+        /* =========================
+           🔐 LOGIN
+        ========================= */
+        async function login() {
+            const email = document.getElementById("email").value
+            const password = document.getElementById("password").value
+
+            if (!email || !password) {
+                showMsg("Enter email and password", "red")
+                return
+            }
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            })
+
+            if (error) {
+                showMsg(error.message, "red")
+                return
+            }
+
+            navigator.vibrate(100)
+            showMsg("Login successful 🚀", "green")
+
+            setTimeout(() => {
+                window.location.href = "index.html"
+            }, 1000)
+        }
+
+        /* =========================
+           🆕 SIGNUP
+        ========================= */
+        async function signup() {
+            const email = document.getElementById("email").value
+            const password = document.getElementById("password").value
+
+            if (!email || !password) {
+                showMsg("Enter email and password", "red")
+                return
+            }
+
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password
+            })
+
+            if (error) {
+                showMsg(error.message, "red")
+                return
+            }
+
+            navigator.vibrate([100, 50, 100])
+            showMsg("Account created ✅", "green")
+        }
+
+        /* =========================
+           💬 MESSAGE
+        ========================= */
+        function showMsg(text, color) {
+            const msg = document.getElementById("msg")
+            msg.textContent = text
+            msg.className = `text-${color}-400 text-center mt-4 text-sm`
+        }
+
+        /* =========================
+           🔁 AUTO LOGIN CHECK
+        ========================= */
+        async function checkUser() {
+            const { data } = await supabase.auth.getUser()
+            if (data.user) {
+                window.location.href = "index.html"
+            }
+        }
+        checkUser()
+
+        /* =========================
+           ✨ ANIMATION
+        ========================= */
+        gsap.from("#card", {
+            opacity: 0,
+            y: 60,
+            duration: 0.8,
+            ease: "power2.out"
+        })
+
+        /* =========================
+           📱 TILT EFFECT (PHONE SENSOR)
+        ========================= */
+        window.addEventListener("deviceorientation", (e) => {
+            const card = document.getElementById("card")
+
+            const x = e.gamma / 12
+            const y = e.beta / 12
+
+            card.style.transform =
+                `rotateY(${x}deg) rotateX(${y}deg)`
+        })
+
+        /* =========================
+           🍎 iPhone Permission Fix
+        ========================= */
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            document.body.addEventListener('click', () => {
+                DeviceOrientationEvent.requestPermission()
+            }, { once: true })
+        }
+    </script>
+
+</body>
+
+</html>

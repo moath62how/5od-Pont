@@ -3,118 +3,131 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Vote App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard</title>
 
-    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- GSAP -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-
-    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
 
-<body class="bg-gradient-to-br from-black via-gray-900 to-black text-white min-h-screen p-4">
+<body class="bg-gradient-to-br from-black via-gray-900 to-black text-white min-h-screen p-6">
 
-    <h1 class="text-3xl font-bold text-center mb-6">🔥 Votes</h1>
+    <h1 class="text-3xl font-bold text-center mb-6">🏆 Leaderboard</h1>
 
-    <!-- Upload -->
-    <div class="bg-white/10 backdrop-blur-lg p-4 rounded-2xl mb-6 shadow-xl">
-        <input type="file" id="fileInput" class="mb-2 w-full text-sm">
-        <input type="text" id="title" placeholder="Vote title" class="w-full p-2 rounded bg-black/50 mb-2">
-
-        <button onclick="createVote()" class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded-xl">
-            Create Vote
-        </button>
+    <!-- USER INFO -->
+    <div id="userBox" class="text-center mb-8 hidden">
+        <p>Welcome 👋 <span id="userEmail"></span></p>
+        <p class="text-xl mt-2">
+            Your Score: <span id="userScore" class="text-green-400 font-bold"></span>
+        </p>
     </div>
 
-    <!-- Votes -->
-    <div id="votes" class="grid gap-4"></div>
+    <!-- TOP 3 -->
+    <div class="mb-10">
+        <h2 class="text-2xl mb-3">🔥 Top 3</h2>
+        <div id="top3" class="space-y-2"></div>
+    </div>
+
+    <!-- LAST 3 -->
+    <div>
+        <h2 class="text-2xl mb-3">💀 Last 3</h2>
+        <div id="last3" class="space-y-2"></div>
+    </div>
 
     <script>
-        const supabase = supabase.createClient(
-            "YOUR_URL",
-            "YOUR_KEY"
-        )
+        const SUPABASE_URL = "https://pfjknmkpfpnlrqjiwkan.supabase.co"
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmamtubWtwZnBubHJxaml3a2FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzY1ODUsImV4cCI6MjA5MDY1MjU4NX0.MivoUcReqSyKgecIhvQX3UTQswO52xzDXnMqoHCH6AA"
 
-        async function createVote() {
-            const file = fileInput.files[0]
-            const title = document.getElementById('title').value
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-            if (!file) return alert("upload image")
-
-            const path = `votes/${Date.now()}-${file.name}`
-
-            await supabase.storage.from('images').upload(path, file)
-
-            await supabase.from('votes').insert({
-                title,
-                image_path: path,
-                end_time: new Date(Date.now() + 600000)
-            })
-
-            navigator.vibrate(100)
-            loadVotes()
+        /* =========================
+           GET CURRENT USER
+        ========================= */
+        async function getUser() {
+            const { data } = await supabase.auth.getUser()
+            return data.user
         }
 
-        async function loadVotes() {
-            const { data } = await supabase.from('votes')
+        /* =========================
+           LOAD LEADERBOARD
+        ========================= */
+        async function loadLeaderboard() {
+            const { data: users } = await supabase
+                .from('users')
                 .select('*')
-                .eq('is_deleted', false)
+                .order('points', { ascending: false })
 
-            const container = document.getElementById('votes')
-            container.innerHTML = ""
+            if (!users) return
 
-            data.forEach(v => {
-                const url = supabase.storage.from('images')
-                    .getPublicUrl(v.image_path).data.publicUrl
+            renderTop3(users.slice(0, 3))
+            renderLast3(users.slice(-3).reverse())
+        }
 
-                const div = document.createElement('div')
-                div.className = "vote-card bg-white/10 p-3 rounded-2xl backdrop-blur-lg"
+        /* =========================
+           TOP 3
+        ========================= */
+        function renderTop3(users) {
+            const box = document.getElementById("top3")
+            box.innerHTML = ""
 
-                div.innerHTML = `
-      <img src="${url}" class="rounded-xl mb-2 w-full h-48 object-cover">
-      <h2 class="text-lg">${v.title}</h2>
+            users.forEach((u, i) => {
+                box.innerHTML += `
+      <div class="bg-white/10 p-3 rounded-xl flex justify-between">
+        <span>🥇 ${i + 1}. ${u.name}</span>
+        <span class="text-green-400">${u.points}</span>
+      </div>
     `
-
-                container.appendChild(div)
-
-                // GSAP animation
-                gsap.from(div, {
-                    opacity: 0,
-                    y: 50,
-                    duration: 0.5
-                })
             })
         }
 
-        loadVotes()
+        /* =========================
+           LAST 3
+        ========================= */
+        function renderLast3(users) {
+            const box = document.getElementById("last3")
+            box.innerHTML = ""
 
-        // 🔥 Tilt effect (phone sensors)
-        window.addEventListener("deviceorientation", (e) => {
-            const cards = document.querySelectorAll(".vote-card")
-
-            cards.forEach(card => {
-                const x = e.gamma / 10
-                const y = e.beta / 10
-
-                card.style.transform =
-                    `rotateY(${x}deg) rotateX(${y}deg)`
+            users.forEach((u) => {
+                box.innerHTML += `
+      <div class="bg-white/5 p-3 rounded-xl flex justify-between">
+        <span>⚠️ ${u.name}</span>
+        <span class="text-red-400">${u.points}</span>
+      </div>
+    `
             })
-        })
+        }
 
-        // 🔥 Shake = vibration feedback
-        window.addEventListener("devicemotion", (e) => {
-            const acc = e.accelerationIncludingGravity
-            if (!acc) return
+        /* =========================
+           USER SCORE
+        ========================= */
+        async function loadUserBox(user) {
+            const { data } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', user.id)
+                .single()
 
-            const total = Math.abs(acc.x + acc.y + acc.z)
+            document.getElementById("userBox").classList.remove("hidden")
+            document.getElementById("userEmail").innerText = user.email
+            document.getElementById("userScore").innerText = data.points
+        }
 
-            if (total > 40) {
-                navigator.vibrate(200)
+        /* =========================
+           INIT
+        ========================= */
+        async function init() {
+            const user = await getUser()
+
+            if (!user) {
+                window.location.href = "login.html"
+                return
             }
-        })
+
+            await loadLeaderboard()
+            await loadUserBox(user)
+        }
+
+        init()
     </script>
 
 </body>
