@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+
+    <!-- Styles -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Scripts (order matters!) -->
+    <script src="js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+</head>
+
+<body
+    class="bg-gradient-to-br from-black via-gray-900 to-black text-white flex items-center justify-center min-h-screen">
+
+    <div class="bg-white/10 backdrop-blur-xl p-6 rounded-2xl w-full max-w-sm shadow-2xl">
+
+        <h1 class="text-2xl font-bold text-center mb-5"><i class="fas fa-user-plus text-green-400"></i> Create Account
+        </h1>
+
+        <input id="name" type="text" placeholder="Name"
+            class="w-full p-3 mb-3 rounded-lg bg-black/50 focus:outline-none">
+
+        <input id="email" type="email" placeholder="Email"
+            class="w-full p-3 mb-3 rounded-lg bg-black/50 focus:outline-none">
+
+        <input id="password" type="password" placeholder="Password"
+            class="w-full p-3 mb-4 rounded-lg bg-black/50 focus:outline-none">
+
+        <button onclick="handleSignup()" class="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-xl">
+            Sign Up
+        </button>
+
+        <p id="msg" class="text-center mt-4 text-sm"></p>
+
+        <p class="text-center mt-3 text-sm text-gray-400">
+            Already have an account?
+            <a href="login.html" class="text-purple-400">Login</a>
+        </p>
+
+    </div>
+
+    <script>
+        // Check if already logged in
+        Auth.redirectIfAuth();
+
+        // Page-specific handler
+        async function handleSignup() {
+            try {
+                const name = Utils.$("name").value;
+                const email = Utils.$("email").value;
+                const password = Utils.$("password").value;
+
+                await Auth.signUp(name, email, password);
+                Utils.showMsg("Account created <i class='fas fa-check-circle text-green-400'></i> Redirecting...", "green");
+                Utils.redirectTo(CONFIG.PAGES.LOGIN, 1200);
+            } catch (error) {
+                Utils.showMsg(error.message, "red");
+            }
+        }
+    </script>
+
+</body>
+
+</html>

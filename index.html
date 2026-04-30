@@ -6,17 +6,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leaderboard</title>
 
+    <!-- Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Scripts (order matters!) -->
+    <script src="js/config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/leaderboard.js"></script>
 </head>
 
 <body class="bg-gradient-to-br from-black via-gray-900 to-black text-white min-h-screen p-6">
 
-    <h1 class="text-3xl font-bold text-center mb-6">🏆 Leaderboard</h1>
+    <h1 class="text-3xl font-bold text-center mb-6"><i class="fas fa-trophy text-yellow-400"></i> Leaderboard</h1>
 
     <!-- USER INFO -->
     <div id="userBox" class="text-center mb-8 hidden">
-        <p>Welcome 👋 <span id="userEmail"></span></p>
+        <p>Welcome <i class="fas fa-hand-wave text-blue-400"></i> <span id="userEmail"></span></p>
         <p class="text-xl mt-2">
             Your Score: <span id="userScore" class="text-green-400 font-bold"></span>
         </p>
@@ -24,110 +33,25 @@
 
     <!-- TOP 3 -->
     <div class="mb-10">
-        <h2 class="text-2xl mb-3">🔥 Top 3</h2>
+        <h2 class="text-2xl mb-3"><i class="fas fa-fire text-orange-500"></i> Top 3</h2>
         <div id="top3" class="space-y-2"></div>
     </div>
 
     <!-- LAST 3 -->
     <div>
-        <h2 class="text-2xl mb-3">💀 Last 3</h2>
+        <h2 class="text-2xl mb-3"><i class="fas fa-skull text-red-500"></i> Last 3</h2>
         <div id="last3" class="space-y-2"></div>
     </div>
 
     <script>
-        const SUPABASE_URL = "https://pfjknmkpfpnlrqjiwkan.supabase.co"
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmamtubWtwZnBubHJxaml3a2FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzY1ODUsImV4cCI6MjA5MDY1MjU4NX0.MivoUcReqSyKgecIhvQX3UTQswO52xzDXnMqoHCH6AA"
+        // Page-specific initialization
+        (async function init() {
+            const user = await Auth.requireAuth();
+            if (!user) return;
 
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-
-        /* =========================
-           GET CURRENT USER
-        ========================= */
-        async function getUser() {
-            const { data } = await supabase.auth.getUser()
-            return data.user
-        }
-
-        /* =========================
-           LOAD LEADERBOARD
-        ========================= */
-        async function loadLeaderboard() {
-            const { data: users } = await supabase
-                .from('users')
-                .select('*')
-                .order('points', { ascending: false })
-
-            if (!users) return
-
-            renderTop3(users.slice(0, 3))
-            renderLast3(users.slice(-3).reverse())
-        }
-
-        /* =========================
-           TOP 3
-        ========================= */
-        function renderTop3(users) {
-            const box = document.getElementById("top3")
-            box.innerHTML = ""
-
-            users.forEach((u, i) => {
-                box.innerHTML += `
-      <div class="bg-white/10 p-3 rounded-xl flex justify-between">
-        <span>🥇 ${i + 1}. ${u.name}</span>
-        <span class="text-green-400">${u.points}</span>
-      </div>
-    `
-            })
-        }
-
-        /* =========================
-           LAST 3
-        ========================= */
-        function renderLast3(users) {
-            const box = document.getElementById("last3")
-            box.innerHTML = ""
-
-            users.forEach((u) => {
-                box.innerHTML += `
-      <div class="bg-white/5 p-3 rounded-xl flex justify-between">
-        <span>⚠️ ${u.name}</span>
-        <span class="text-red-400">${u.points}</span>
-      </div>
-    `
-            })
-        }
-
-        /* =========================
-           USER SCORE
-        ========================= */
-        async function loadUserBox(user) {
-            const { data } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', user.id)
-                .single()
-
-            document.getElementById("userBox").classList.remove("hidden")
-            document.getElementById("userEmail").innerText = user.email
-            document.getElementById("userScore").innerText = data.points
-        }
-
-        /* =========================
-           INIT
-        ========================= */
-        async function init() {
-            const user = await getUser()
-
-            if (!user) {
-                window.location.href = "login.html"
-                return
-            }
-
-            await loadLeaderboard()
-            await loadUserBox(user)
-        }
-
-        init()
+            await Leaderboard.load();
+            await Leaderboard.loadUserBox(user);
+        })();
     </script>
 
 </body>
