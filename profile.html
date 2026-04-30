@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي</title>
+
+    <!-- Styles -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Scripts (order matters!) -->
+    <script src="js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/leaderboard.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-black via-gray-900 to-black text-white min-h-screen p-6">
+
+    <!-- LOADER -->
+    <div id="loader" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-yellow-400 mb-4"></i>
+            <p class="text-xl">جاري التحميل...</p>
+        </div>
+    </div>
+
+    <!-- BACK BUTTON -->
+    <div class="mb-4">
+        <a href="index.html"
+            class="inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition">
+            <i class="fas fa-arrow-right"></i> رجوع
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-center mb-6"><i class="fas fa-user-circle text-blue-400"></i> الملف الشخصي</h1>
+
+    <!-- PROFILE SETTINGS -->
+    <div class="max-w-md mx-auto bg-white/10 p-6 rounded-xl">
+
+        <!-- Profile Picture -->
+        <div class="text-center mb-6">
+            <div class="relative inline-block">
+                <img id="profilePic" src="" alt="Profile"
+                    class="w-32 h-32 rounded-full border-4 border-yellow-400 mx-auto mb-3">
+                <button onclick="document.getElementById('profilePicInput').click()"
+                    class="absolute bottom-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow-lg transition">
+                    <i class="fas fa-camera"></i>
+                </button>
+            </div>
+            <input type="file" id="profilePicInput" accept="image/*" class="hidden" onchange="uploadProfilePic()">
+        </div>
+
+        <!-- User Info -->
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm mb-2">الاسم</label>
+                <input id="userName" type="text" class="w-full p-3 rounded bg-black/50 text-white" readonly>
+            </div>
+
+            <div>
+                <label class="block text-sm mb-2">البريد الإلكتروني</label>
+                <input id="userEmail" type="email" class="w-full p-3 rounded bg-black/50 text-white" readonly>
+            </div>
+
+            <div>
+                <label class="block text-sm mb-2">النقاط</label>
+                <input id="userPoints" type="text" class="w-full p-3 rounded bg-black/50 text-white" readonly>
+            </div>
+        </div>
+
+        <!-- Message -->
+        <div id="msg" class="mt-4"></div>
+
+        <!-- Logout Button -->
+        <button onclick="Auth.logout()"
+            class="w-full mt-6 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold transition">
+            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+        </button>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Upload profile picture
+        async function uploadProfilePic() {
+            const fileInput = document.getElementById('profilePicInput');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            if (!currentUser) {
+                Utils.showMsg("الرجاء تسجيل الدخول أولاً", "red");
+                return;
+            }
+
+            // Upload to Supabase Storage
+            const fileName = `${currentUser.id}.${file.name.split('.').pop()}`;
+            const { error: uploadError } = await db.instance.storage
+                .from('profile-pics')
+                .upload(fileName, file, { upsert: true });
+
+            if (uploadError) {
+                Utils.showMsg("فشل رفع الصورة: " + uploadError.message, "red");
+                return;
+            }
+
+            // Get public URL
+            const { data: urlData } = db.instance.storage
+                .from('profile-pics')
+                .getPublicUrl(fileName);
+
+            // Update user profile_pic in database
+            const { error: updateError } = await db.instance
+                .from('users')
+                .update({ profile_pic: urlData.publicUrl })
+                .eq('id', currentUser.id);
+
+            if (updateError) {
+                Utils.showMsg("فشل تحديث الصورة: " + updateError.message, "red");
+                return;
+            }
+
+            Utils.showMsg("تم تحديث الصورة بنجاح!", "green");
+
+            // Update display
+            document.getElementById('profilePic').src = urlData.publicUrl;
+        }
+
+        // Initialize
+        (async function init() {
+            const user = await Auth.requireAuth();
+            if (!user) return;
+
+            currentUser = user;
+
+            const userData = await db.getUserById(user.id);
+            if (!userData) return;
+
+            // Set profile picture
+            const profilePic = document.getElementById('profilePic');
+            if (userData.profile_pic) {
+                profilePic.src = userData.profile_pic;
+            } else {
+                profilePic.src = Leaderboard.getAvatar(userData.name);
+            }
+
+            // Set user info
+            document.getElementById('userName').value = userData.name;
+            document.getElementById('userEmail').value = user.email;
+            document.getElementById('userPoints').value = userData.points + ' نقطة';
+
+            // Hide loader
+            document.getElementById('loader')?.classList.add('hidden');
+        })();
+    </script>
+
+</body>
+
+</html>

@@ -31,6 +31,36 @@
 
     <h1 class="text-3xl font-bold text-center mb-6"><i class="fas fa-trophy text-yellow-400"></i> لوحة البونطات</h1>
 
+    <!-- PROFILE BUTTON (shown when not logged in) -->
+    <div id="profileButton" class="fixed top-4 right-4 z-40 hidden">
+        <button onclick="window.location.href='login.html'"
+            class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition">
+            <i class="fas fa-user text-xl"></i>
+        </button>
+    </div>
+
+    <!-- USER PROFILE MENU (shown when logged in) -->
+    <div id="userProfileMenu" class="fixed top-4 right-4 z-40 hidden">
+        <button onclick="toggleProfileMenu()" class="relative">
+            <img id="headerAvatar" src="" alt="Profile"
+                class="w-12 h-12 rounded-full border-2 border-yellow-400 hover:border-yellow-300 transition cursor-pointer">
+        </button>
+        <div id="profileDropdown"
+            class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+            <div class="p-3 border-b border-gray-700">
+                <p id="dropdownName" class="font-bold text-white"></p>
+                <p id="dropdownPoints" class="text-sm text-green-400"></p>
+            </div>
+            <button onclick="openProfileSettings()" class="w-full text-right px-4 py-2 hover:bg-gray-700 transition">
+                <i class="fas fa-cog"></i> الإعدادات
+            </button>
+            <button onclick="Auth.logout()"
+                class="w-full text-right px-4 py-2 hover:bg-gray-700 transition text-red-400">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </button>
+        </div>
+    </div>
+
     <!-- USER INFO -->
     <div id="userBox" class="text-center mb-8 hidden">
         <img id="userAvatar" src="" alt="Avatar" class="w-20 h-20 rounded-full mx-auto mb-2 border-2 border-yellow-400">
@@ -67,10 +97,48 @@
     </div>
 
     <script>
+        // Toggle profile dropdown
+        function toggleProfileMenu() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Open profile settings (placeholder)
+        function openProfileSettings() {
+            window.location.href = 'profile.html';
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (event) {
+            const menu = document.getElementById('userProfileMenu');
+            const dropdown = document.getElementById('profileDropdown');
+            if (menu && !menu.contains(event.target)) {
+                dropdown?.classList.add('hidden');
+            }
+        });
+
         // Page-specific initialization
         (async function init() {
             const user = await Auth.requireAuth();
-            if (!user) return;
+            if (!user) {
+                // Show login button
+                document.getElementById('profileButton')?.classList.remove('hidden');
+                return;
+            }
+
+            // Show user profile menu
+            const userData = await db.getUserById(user.id);
+            if (userData) {
+                const profileMenu = document.getElementById('userProfileMenu');
+                const headerAvatar = document.getElementById('headerAvatar');
+                const dropdownName = document.getElementById('dropdownName');
+                const dropdownPoints = document.getElementById('dropdownPoints');
+
+                if (profileMenu) profileMenu.classList.remove('hidden');
+                if (headerAvatar) headerAvatar.src = Leaderboard.getAvatar(userData.name);
+                if (dropdownName) dropdownName.textContent = userData.name;
+                if (dropdownPoints) dropdownPoints.textContent = `${userData.points} نقطة`;
+            }
 
             await Leaderboard.load();
             await Leaderboard.loadUserBox(user);

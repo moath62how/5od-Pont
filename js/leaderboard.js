@@ -20,7 +20,10 @@ const Leaderboard = {
     /**
      * Generate avatar URL for a user
      */
-    getAvatar(name) {
+    getAvatar(name, profilePic = null) {
+        if (profilePic) {
+            return profilePic;
+        }
         const seed = encodeURIComponent(name);
         return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=4f46e5,7c3aed,db2777,dc2626,ea580c,ca8a04,16a34a,0891b2&backgroundType=gradientLinear`;
     },
@@ -61,7 +64,7 @@ const Leaderboard = {
                             <i class="fas fa-fire absolute -top-3 left-1/2 text-orange-400 text-lg animate-pulse transform -translate-x-1/2" style="animation-delay: 0.75s;"></i>
                             <i class="fas fa-fire absolute -bottom-3 left-1/2 text-red-400 text-lg animate-pulse transform -translate-x-1/2" style="animation-delay: 1.05s;"></i>
                         ` : ''}
-                        <img src="${this.getAvatar(u.name)}" alt="صورة" class="${size} rounded-full border-4 ${border}">
+                        <img src="${this.getAvatar(u.name, u.profile_pic)}" alt="صورة" class="${size} rounded-full border-4 ${border}">
                     </div>
                     <span class="font-bold text-lg mt-3">${Utils.escapeHtml(u.name)}</span>
                     <span class="text-green-400 font-bold text-xl">${u.points} نقطة</span>
@@ -103,7 +106,7 @@ const Leaderboard = {
                             <i class="fas fa-egg absolute top-1/2 -left-3 text-yellow-200 text-sm transform -translate-y-1/2 -rotate-45"></i>
                             <i class="fas fa-egg absolute top-1/2 -right-3 text-yellow-200 text-sm transform -translate-y-1/2 rotate-45"></i>
                         ` : ''}
-                        <img src="${this.getAvatar(u.name)}" alt="صورة" class="${size} rounded-full border-4 border-red-500 shadow-xl shadow-red-500/50">
+                        <img src="${this.getAvatar(u.name, u.profile_pic)}" alt="صورة" class="${size} rounded-full border-4 border-red-500 shadow-xl shadow-red-500/50">
                     </div>
                     <span class="font-bold text-lg mt-3">${Utils.escapeHtml(u.name)}</span>
                     <span class="text-red-400 font-bold text-xl">${u.points} نقطة</span>
@@ -128,7 +131,7 @@ const Leaderboard = {
             <div class="bg-white/10 p-3 rounded-xl flex justify-between items-center hover:bg-white/20 transition">
                 <div class="flex items-center gap-3">
                     <span class="text-gray-400 w-6">${i + 1}.</span>
-                    <img src="${this.getAvatar(u.name)}" alt="صورة" class="w-8 h-8 rounded-full border-2 border-gray-500">
+                    <img src="${this.getAvatar(u.name, u.profile_pic)}" alt="صورة" class="w-8 h-8 rounded-full border-2 border-gray-500">
                     <span>${Utils.escapeHtml(u.name)}</span>
                 </div>
                 <span class="text-green-400 font-bold">${u.points} بونط</span>
@@ -152,7 +155,7 @@ const Leaderboard = {
             userBox.classList.remove("hidden");
             userName.textContent = data.name;
             userScore.textContent = data.points;
-            userAvatar.src = this.getAvatar(data.name);
+            userAvatar.src = this.getAvatar(data.name, data.profile_pic);
         }
     }
 };
