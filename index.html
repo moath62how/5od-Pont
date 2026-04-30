@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaderboard</title>
+    <title>لوحة المتصدرين</title>
 
     <!-- Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,26 +21,49 @@
 
 <body class="bg-gradient-to-br from-black via-gray-900 to-black text-white min-h-screen p-6">
 
-    <h1 class="text-3xl font-bold text-center mb-6"><i class="fas fa-trophy text-yellow-400"></i> Leaderboard</h1>
+    <!-- LOADER -->
+    <div id="loader" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-yellow-400 mb-4"></i>
+            <p class="text-xl">جاري التحميل...</p>
+        </div>
+    </div>
+
+    <h1 class="text-3xl font-bold text-center mb-6"><i class="fas fa-trophy text-yellow-400"></i> لوحة المتصدرين</h1>
 
     <!-- USER INFO -->
     <div id="userBox" class="text-center mb-8 hidden">
-        <p>Welcome <i class="fas fa-hand-wave text-blue-400"></i> <span id="userEmail"></span></p>
+        <img id="userAvatar" src="" alt="Avatar" class="w-20 h-20 rounded-full mx-auto mb-2 border-2 border-yellow-400">
+        <p>أهلاً <i class="fas fa-hand-wave text-blue-400"></i> <span id="userName"></span></p>
         <p class="text-xl mt-2">
-            Your Score: <span id="userScore" class="text-green-400 font-bold"></span>
+            نقاطك: <span id="userScore" class="text-green-400 font-bold"></span>
         </p>
     </div>
 
     <!-- TOP 3 -->
     <div class="mb-10">
-        <h2 class="text-2xl mb-3"><i class="fas fa-fire text-orange-500"></i> Top 3</h2>
-        <div id="top3" class="space-y-2"></div>
+        <h2 class="text-2xl mb-3"><i class="fas fa-fire text-orange-500"></i> أفضل 3</h2>
+        <div id="top3" class="flex justify-center items-end gap-4"></div>
     </div>
 
     <!-- LAST 3 -->
+    <div class="mb-10">
+        <h2 class="text-2xl mb-3"><i class="fas fa-skull text-red-500"></i> أسوأ 3</h2>
+        <div id="last3" class="flex justify-center items-end gap-4"></div>
+    </div>
+
+    <!-- VOTE BUTTON -->
+    <div class="text-center mb-10">
+        <a href="vote.html"
+            class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-bold transition">
+            <i class="fas fa-vote-yea"></i> تصويت لأفضل لاعب
+        </a>
+    </div>
+
+    <!-- FULL LEADERBOARD -->
     <div>
-        <h2 class="text-2xl mb-3"><i class="fas fa-skull text-red-500"></i> Last 3</h2>
-        <div id="last3" class="space-y-2"></div>
+        <h2 class="text-2xl mb-3"><i class="fas fa-list text-blue-400"></i> جميع اللاعبين</h2>
+        <div id="leaderboard" class="space-y-2"></div>
     </div>
 
     <script>
@@ -51,6 +74,10 @@
 
             await Leaderboard.load();
             await Leaderboard.loadUserBox(user);
+
+            // Hide loader
+            const loader = document.getElementById('loader');
+            if (loader) loader.classList.add('hidden');
         })();
     </script>
 

@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>تسجيل الدخول</title>
 
     <!-- Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,27 +23,35 @@
 <body
     class="bg-gradient-to-br from-black via-gray-900 to-black text-white flex items-center justify-center min-h-screen">
 
+    <!-- LOADER -->
+    <div id="loader" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-yellow-400 mb-4"></i>
+            <p class="text-xl">جاري التحميل...</p>
+        </div>
+    </div>
+
     <div id="card" class="bg-white/10 backdrop-blur-xl p-6 rounded-2xl w-full max-w-sm shadow-2xl">
 
-        <h1 class="text-2xl font-bold text-center mb-5"><i class="fas fa-fire text-orange-500"></i> Login</h1>
+        <h1 class="text-2xl font-bold text-center mb-5"><i class="fas fa-fire text-orange-500"></i> تسجيل الدخول</h1>
 
         <!-- Email -->
-        <input id="email" type="email" placeholder="Email"
+        <input id="email" type="email" placeholder="البريد الإلكتروني"
             class="w-full p-3 mb-3 rounded-lg bg-black/50 focus:outline-none focus:ring-2 focus:ring-purple-500">
 
         <!-- Password -->
-        <input id="password" type="password" placeholder="Password"
+        <input id="password" type="password" placeholder="كلمة المرور"
             class="w-full p-3 mb-4 rounded-lg bg-black/50 focus:outline-none focus:ring-2 focus:ring-purple-500">
 
         <!-- Login -->
         <button onclick="handleLogin()" class="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-xl transition">
-            Login
+            دخول
         </button>
 
         <!-- Signup -->
         <button onclick="window.location.href='sign-up.html'"
             class="w-full mt-2 bg-gray-700 hover:bg-gray-800 p-3 rounded-xl transition">
-            Create Account
+            إنشاء حساب
         </button>
 
         <!-- Message -->
@@ -54,6 +62,9 @@
     <script>
         // Check if already logged in
         Auth.redirectIfAuth();
+
+        // Hide loader
+        document.getElementById('loader')?.classList.add('hidden');
 
         // GSAP Animation
         gsap.from("#card", {

@@ -9,7 +9,7 @@ const Auth = {
      */
     async login(email, password) {
         if (!email || !password) {
-            throw new Error("Enter email and password");
+            throw new Error("أدخل البريد الإلكتروني وكلمة المرور");
         }
 
         const { data, error } = await db.signInWithPassword(email, password);
@@ -27,7 +27,7 @@ const Auth = {
      */
     async signUp(name, email, password) {
         if (!name || !email || !password) {
-            throw new Error("Fill all fields");
+            throw new Error("املأ جميع الحقول");
         }
 
         // 1. Create auth user

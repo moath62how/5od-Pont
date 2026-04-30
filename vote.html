@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام التصويت</title>
+
+    <!-- Styles -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Scripts (order matters!) -->
+    <script src="js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/vote.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-black via-gray-900 to-black text-white min-h-screen p-4">
+
+    <!-- LOADER -->
+    <div id="loader" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-yellow-400 mb-4"></i>
+            <p class="text-xl">جاري التحميل...</p>
+        </div>
+    </div>
+
+    <h1 class="text-3xl font-bold text-center mb-6"><i class="fas fa-vote-yea text-blue-400"></i> نظام التصويت</h1>
+
+    <!-- CREATE VOTE -->
+    <div class="bg-white/10 p-4 rounded-xl mb-6">
+        <input id="title" placeholder="عنوان التصويت" class="w-full p-2 mb-2 rounded bg-black/50">
+
+        <input id="file" type="file" class="w-full mb-2 text-gray-300">
+
+        <button onclick="Vote.createVote()" class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded transition">
+            إنشاء تصويت
+        </button>
+    </div>
+
+    <!-- VOTES LIST -->
+    <div id="votes" class="space-y-4"></div>
+
+    <script>
+        // Initialize
+        (async function init() {
+            const user = await Auth.requireAuth();
+            if (!user) return;
+
+            await Vote.load();
+
+            // Hide loader
+            document.getElementById('loader')?.classList.add('hidden');
+        })();
+    </script>
+
+</body>
+
+</html>
