@@ -24,10 +24,7 @@ const Vote = {
      * Create a new vote
      */
     async createVote() {
-        console.log("createVote called");
-
         const user = await db.getUser();
-        console.log("User:", user);
 
         if (!user) {
             Utils.showMsg("الرجاء تسجيل الدخول أولاً", "red");
@@ -56,7 +53,6 @@ const Vote = {
             .upload(path, file);
 
         if (uploadError) {
-            console.error("Upload error:", uploadError);
             Utils.showMsg("فشل الرفع: " + uploadError.message, "red");
             return;
         }
@@ -75,7 +71,6 @@ const Vote = {
             });
 
         if (error) {
-            console.error("Insert error:", error);
             Utils.showMsg("خطأ: " + error.message, "red");
             return;
         }
@@ -127,23 +122,30 @@ const Vote = {
         const user = await db.getUser();
 
         for (const v of votes) {
+            // Check if vote has ended and process it
+            const now = new Date();
+            const endTime = v.end_time ? new Date(v.end_time + 'Z') : null;
+            const hasEnded = endTime ? endTime < now : false;
+
+            if (hasEnded) {
+                // Award points and delete vote
+                await this.processEndedVote(v.id, v.target_user_id);
+                continue; // Skip rendering this vote
+            }
+
             const url = db.instance.storage
                 .from("images")
                 .getPublicUrl(v.image_path).data.publicUrl;
 
             const withCount = await this.getCount(v.id, 'with');
             const againstCount = await this.getCount(v.id, 'against');
-            const totalVotes = withCount + againstCount;
             const targetUserName = v.target_user?.name || 'غير معروف';
 
             // Check user's vote
             const userVote = await this.getUserVote(v.id, user?.id);
 
-            // Check if voting has ended
-            const now = new Date();
-            const endTime = v.end_time ? new Date(v.end_time + 'Z') : null;
-            const hasEnded = endTime ? endTime < now : false;
-            const timeLeft = endTime ? this.getTimeLeft(endTime) : "لا يوجد وقت محدد";
+            // Generate unique ID for timer
+            const timerId = `timer-${v.id}`;
 
             container.innerHTML += `
                 <div class="bg-white/10 p-4 rounded-xl max-w-md mx-auto">
@@ -153,32 +155,7 @@ const Vote = {
                         <i class="fas fa-user"></i> اللاعب المستهدف: ${Utils.escapeHtml(targetUserName)}
                     </p>
                     
-                    ${hasEnded ? `
-                        <div class="bg-gray-700 p-3 rounded mb-3">
-                            <p class="text-center text-yellow-400 font-bold">
-                                <i class="fas fa-clock"></i> انتهى التصويت
-                            </p>
-                            ${totalVotes > 0 ? `
-                                <p class="text-center mt-2">
-                                    ${withCount > againstCount ?
-                            '<span class="text-green-400">✓ فاز "بونط"</span>' :
-                            withCount < againstCount ?
-                                '<span class="text-red-400">✓ فاز "احبنه"</span>' :
-                                '<span class="text-gray-400">تعادل</span>'
-                        }
-                                </p>
-                            ` : ''}
-                            ${userVote ? `
-                                <p class="text-center mt-2 text-sm">
-                                    <i class="fas fa-heart text-pink-400"></i> صوّت بـ: 
-                                    ${userVote === 'with' ?
-                            '<span class="text-green-400">بونط</span>' :
-                            '<span class="text-red-400">احبنه</span>'
-                        }
-                                </p>
-                            ` : ''}
-                        </div>
-                    ` : userVote ? `
+                    ${userVote ? `
                         <div class="bg-purple-700/50 p-3 rounded mb-3 border-2 border-pink-400">
                             <p class="text-center text-white font-bold">
                                 <i class="fas fa-heart text-pink-400 animate-pulse"></i> لقد صوّت بـ: 
@@ -188,9 +165,6 @@ const Vote = {
                     }
                             </p>
                         </div>
-                        <p class="text-center text-sm text-gray-400 mb-2">
-                            <i class="fas fa-hourglass-half"></i> ${timeLeft}
-                        </p>
                     ` : `
                         <div class="flex gap-2 mb-3">
                             <button onclick="Vote.cast('${v.id}', 'with')" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition transform hover:scale-105">
@@ -200,10 +174,11 @@ const Vote = {
                                 احبنه <i class="fas fa-thumbs-down"></i>
                             </button>
                         </div>
-                        <p class="text-center text-sm text-gray-400 mb-2">
-                            <i class="fas fa-hourglass-half"></i> ${timeLeft}
-                        </p>
                     `}
+                    
+                    <p class="text-center text-lg font-bold text-yellow-400 mb-2">
+                        <i class="fas fa-hourglass-half"></i> <span id="${timerId}">--:--</span>
+                    </p>
                     
                     <div class="flex justify-between text-sm text-gray-300">
                         <p class="text-green-400"><i class="fas fa-thumbs-up"></i> بونط: ${withCount}</p>
@@ -211,23 +186,91 @@ const Vote = {
                     </div>
                 </div>
             `;
+
+            // Start countdown timer
+            this.startTimer(timerId, endTime);
         }
     },
 
     /**
-     * Get time left for voting
+     * Start countdown timer for a vote
      */
-    getTimeLeft(endTime) {
-        const now = new Date();
-        const end = endTime instanceof Date ? endTime : new Date(endTime + 'Z');
-        const diff = end - now;
+    startTimer(timerId, endTime) {
+        const updateTimer = () => {
+            const timerElement = document.getElementById(timerId);
+            if (!timerElement) return;
 
-        if (diff <= 0) return "انتهى";
+            const now = new Date();
+            const diff = endTime - now;
 
-        const minutes = Math.floor(diff / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
+            if (diff <= 0) {
+                timerElement.textContent = "انتهى!";
+                timerElement.parentElement.classList.remove('text-yellow-400');
+                timerElement.parentElement.classList.add('text-red-500', 'animate-pulse');
+                // Reload to process ended vote
+                setTimeout(() => this.load(), 1000);
+                return;
+            }
 
-        return `${minutes}:${seconds.toString().padStart(2, '0')} متبقي`;
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            // Change color when less than 1 minute
+            if (minutes === 0) {
+                timerElement.parentElement.classList.remove('text-yellow-400');
+                timerElement.parentElement.classList.add('text-red-500');
+            }
+
+            setTimeout(updateTimer, 1000);
+        };
+
+        updateTimer();
+    },
+
+    /**
+     * Process ended vote: award points and delete
+     */
+    async processEndedVote(voteId, targetUserId) {
+        console.log("Processing ended vote:", voteId);
+
+        const withCount = await this.getCount(voteId, 'with');
+        const againstCount = await this.getCount(voteId, 'against');
+
+        console.log("With:", withCount, "Against:", againstCount);
+
+        // Award point if "with" wins
+        if (withCount > againstCount && targetUserId) {
+            const { data: targetUser } = await db.instance
+                .from("users")
+                .select("points, name")
+                .eq("id", targetUserId)
+                .single();
+
+            if (targetUser) {
+                await db.instance
+                    .from("users")
+                    .update({ points: targetUser.points + 1 })
+                    .eq("id", targetUserId);
+
+                console.log("Awarded point to " + targetUser.name);
+                Utils.showMsg("تم منح نقطة لـ " + targetUser.name + "!", "green");
+            }
+        }
+
+        // Delete user votes first (foreign key constraint)
+        await db.instance
+            .from("user_votes")
+            .delete()
+            .eq("vote_id", voteId);
+
+        // Mark vote as deleted
+        await db.instance
+            .from("votes")
+            .update({ is_deleted: true })
+            .eq("id", voteId);
+
+        console.log("Vote deleted:", voteId);
     },
 
     /**
@@ -267,44 +310,9 @@ const Vote = {
         }
 
         const choiceText = choice === 'with' ? 'بونط' : 'احبنه';
-        Utils.showMsg(`تم التصويت بـ "${choiceText}" بنجاح!`, "green");
+        Utils.showMsg("تم التصويت بـ " + choiceText + " بنجاح!", "green");
         Utils.vibrate(50);
         await this.load();
-    },
-
-    /**
-     * Check and award points for ended votes
-     */
-    async checkAndAwardPoints(voteId) {
-        const { data: vote } = await db.instance
-            .from("votes")
-            .select("*")
-            .eq("id", voteId)
-            .single();
-
-        if (!vote || !vote.target_user_id) return;
-
-        // Check if vote has ended
-        if (new Date(vote.end_time + 'Z') > new Date()) return;
-
-        const withCount = await this.getCount(voteId, 'with');
-        const againstCount = await this.getCount(voteId, 'against');
-
-        // Award point if "with" wins
-        if (withCount > againstCount) {
-            const { data: targetUser } = await db.instance
-                .from("users")
-                .select("points")
-                .eq("id", vote.target_user_id)
-                .single();
-
-            if (targetUser) {
-                await db.instance
-                    .from("users")
-                    .update({ points: targetUser.points + 1 })
-                    .eq("id", vote.target_user_id);
-            }
-        }
     },
 
     /**
