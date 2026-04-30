@@ -104,16 +104,27 @@ const Vote = {
                 .from("images")
                 .getPublicUrl(v.image_path).data.publicUrl;
 
-            const count = await this.getCount(v.id);
+            const withCount = await this.getCount(v.id, 'with');
+            const againstCount = await this.getCount(v.id, 'against');
 
             container.innerHTML += `
-                <div class="bg-white/10 p-4 rounded-xl">
-                    <img src="${url}" class="rounded mb-2 w-full h-48 object-cover" alt="${Utils.escapeHtml(v.title)}">
-                    <h2 class="text-lg mb-2">${Utils.escapeHtml(v.title)}</h2>
-                    <button onclick="Vote.cast('${v.id}')" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition">
-                        تصويت <i class="fas fa-heart"></i>
-                    </button>
-                    <p class="mt-2 text-sm text-gray-300">عدد الأصوات: ${count}</p>
+                <div class="bg-white/10 p-4 rounded-xl max-w-md mx-auto">
+                    <img src="${url}" class="rounded mb-3 w-full h-96 object-cover" alt="${Utils.escapeHtml(v.title)}">
+                    <h2 class="text-lg mb-3 font-bold">${Utils.escapeHtml(v.title)}</h2>
+                    
+                    <div class="flex gap-2 mb-3">
+                        <button onclick="Vote.cast('${v.id}', 'with')" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition">
+                            بونط <i class="fas fa-thumbs-up"></i>
+                        </button>
+                        <button onclick="Vote.cast('${v.id}', 'against')" class="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition">
+                            احبنه <i class="fas fa-thumbs-down"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex justify-between text-sm text-gray-300">
+                        <p class="text-green-400">بونط: ${withCount}</p>
+                        <p class="text-red-400">احبنه: ${againstCount}</p>
+                    </div>
                 </div>
             `;
         }
@@ -122,7 +133,7 @@ const Vote = {
     /**
      * Cast a vote
      */
-    async cast(voteId) {
+    async cast(voteId, choice) {
         const user = await db.getUser();
         if (!user) {
             Utils.showMsg("الرجاء تسجيل الدخول أولاً", "red");
@@ -133,7 +144,8 @@ const Vote = {
             .from("user_votes")
             .insert({
                 user_id: user.id,
-                vote_id: voteId
+                vote_id: voteId,
+                choice: choice
             });
 
         if (error) {
@@ -149,11 +161,17 @@ const Vote = {
     /**
      * Get vote count
      */
-    async getCount(voteId) {
-        const { data } = await db.instance
+    async getCount(voteId, choice = null) {
+        let query = db.instance
             .from("user_votes")
             .select("*")
             .eq("vote_id", voteId);
+
+        if (choice) {
+            query = query.eq("choice", choice);
+        }
+
+        const { data } = await query;
 
         return data ? data.length : 0;
     }
