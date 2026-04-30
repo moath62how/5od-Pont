@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Vote App</title>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-black via-gray-900 to-black text-white min-h-screen p-4">
+
+    <h1 class="text-3xl font-bold text-center mb-6">🔥 Votes</h1>
+
+    <!-- Upload -->
+    <div class="bg-white/10 backdrop-blur-lg p-4 rounded-2xl mb-6 shadow-xl">
+        <input type="file" id="fileInput" class="mb-2 w-full text-sm">
+        <input type="text" id="title" placeholder="Vote title" class="w-full p-2 rounded bg-black/50 mb-2">
+
+        <button onclick="createVote()" class="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded-xl">
+            Create Vote
+        </button>
+    </div>
+
+    <!-- Votes -->
+    <div id="votes" class="grid gap-4"></div>
+
+    <script>
+        const supabase = supabase.createClient(
+            "YOUR_URL",
+            "YOUR_KEY"
+        )
+
+        async function createVote() {
+            const file = fileInput.files[0]
+            const title = document.getElementById('title').value
+
+            if (!file) return alert("upload image")
+
+            const path = `votes/${Date.now()}-${file.name}`
+
+            await supabase.storage.from('images').upload(path, file)
+
+            await supabase.from('votes').insert({
+                title,
+                image_path: path,
+                end_time: new Date(Date.now() + 600000)
+            })
+
+            navigator.vibrate(100)
+            loadVotes()
+        }
+
+        async function loadVotes() {
+            const { data } = await supabase.from('votes')
+                .select('*')
+                .eq('is_deleted', false)
+
+            const container = document.getElementById('votes')
+            container.innerHTML = ""
+
+            data.forEach(v => {
+                const url = supabase.storage.from('images')
+                    .getPublicUrl(v.image_path).data.publicUrl
+
+                const div = document.createElement('div')
+                div.className = "vote-card bg-white/10 p-3 rounded-2xl backdrop-blur-lg"
+
+                div.innerHTML = `
+      <img src="${url}" class="rounded-xl mb-2 w-full h-48 object-cover">
+      <h2 class="text-lg">${v.title}</h2>
+    `
+
+                container.appendChild(div)
+
+                // GSAP animation
+                gsap.from(div, {
+                    opacity: 0,
+                    y: 50,
+                    duration: 0.5
+                })
+            })
+        }
+
+        loadVotes()
+
+        // 🔥 Tilt effect (phone sensors)
+        window.addEventListener("deviceorientation", (e) => {
+            const cards = document.querySelectorAll(".vote-card")
+
+            cards.forEach(card => {
+                const x = e.gamma / 10
+                const y = e.beta / 10
+
+                card.style.transform =
+                    `rotateY(${x}deg) rotateX(${y}deg)`
+            })
+        })
+
+        // 🔥 Shake = vibration feedback
+        window.addEventListener("devicemotion", (e) => {
+            const acc = e.accelerationIncludingGravity
+            if (!acc) return
+
+            const total = Math.abs(acc.x + acc.y + acc.z)
+
+            if (total > 40) {
+                navigator.vibrate(200)
+            }
+        })
+    </script>
+
+</body>
+
+</html>
