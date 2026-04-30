@@ -38,27 +38,17 @@ const Vote = {
         const fileInput = Utils.$("file");
         const targetUserSelect = Utils.$("targetUser");
 
-        console.log("Title input:", titleInput);
-        console.log("File input:", fileInput);
-        console.log("Target user select:", targetUserSelect);
-
         const title = titleInput?.value;
         const file = fileInput?.files[0];
         const targetUserId = targetUserSelect?.value;
 
-        console.log("Title:", title);
-        console.log("File:", file);
-        console.log("Target User ID:", targetUserId);
-
         if (!title || !file || !targetUserId) {
-            Utils.showMsg("الرجاء ملء جميع الحقول واختيار اللاعب المستهدف", "red");
+            Utils.showMsg("الرجاء ملء جميع الحقول واختيار اللاعب المستهدف", "yellow");
             return;
         }
 
         const voteId = crypto.randomUUID();
         const path = `votes/${voteId}/${file.name}`;
-
-        console.log("Uploading to:", path);
 
         // Upload image
         const { error: uploadError } = await db.instance.storage
@@ -70,8 +60,6 @@ const Vote = {
             Utils.showMsg("فشل الرفع: " + uploadError.message, "red");
             return;
         }
-
-        console.log("Upload successful, inserting vote...");
 
         // Insert vote
         const { error } = await db.instance
@@ -92,13 +80,28 @@ const Vote = {
             return;
         }
 
-        console.log("Vote created successfully!");
         Utils.showMsg("تم إنشاء التصويت بنجاح!", "green");
         Utils.vibrate(100);
         titleInput.value = "";
         fileInput.value = "";
         targetUserSelect.value = "";
         await this.load();
+    },
+
+    /**
+     * Get user's vote for a specific vote
+     */
+    async getUserVote(voteId, userId) {
+        if (!userId) return null;
+
+        const { data } = await db.instance
+            .from("user_votes")
+            .select("choice")
+            .eq("vote_id", voteId)
+            .eq("user_id", userId)
+            .single();
+
+        return data?.choice || null;
     },
 
     /**
@@ -121,6 +124,8 @@ const Vote = {
             return;
         }
 
+        const user = await db.getUser();
+
         for (const v of votes) {
             const url = db.instance.storage
                 .from("images")
@@ -131,9 +136,14 @@ const Vote = {
             const totalVotes = withCount + againstCount;
             const targetUserName = v.target_user?.name || 'غير معروف';
 
+            // Check user's vote
+            const userVote = await this.getUserVote(v.id, user?.id);
+
             // Check if voting has ended
-            const hasEnded = new Date(v.end_time) < new Date();
-            const timeLeft = this.getTimeLeft(v.end_time);
+            const now = new Date();
+            const endTime = v.end_time ? new Date(v.end_time + 'Z') : null;
+            const hasEnded = endTime ? endTime < now : false;
+            const timeLeft = endTime ? this.getTimeLeft(endTime) : "لا يوجد وقت محدد";
 
             container.innerHTML += `
                 <div class="bg-white/10 p-4 rounded-xl max-w-md mx-auto">
@@ -158,13 +168,35 @@ const Vote = {
                         }
                                 </p>
                             ` : ''}
+                            ${userVote ? `
+                                <p class="text-center mt-2 text-sm">
+                                    <i class="fas fa-heart text-pink-400"></i> صوّت بـ: 
+                                    ${userVote === 'with' ?
+                            '<span class="text-green-400">بونط</span>' :
+                            '<span class="text-red-400">احبنه</span>'
+                        }
+                                </p>
+                            ` : ''}
                         </div>
+                    ` : userVote ? `
+                        <div class="bg-purple-700/50 p-3 rounded mb-3 border-2 border-pink-400">
+                            <p class="text-center text-white font-bold">
+                                <i class="fas fa-heart text-pink-400 animate-pulse"></i> لقد صوّت بـ: 
+                                ${userVote === 'with' ?
+                        '<span class="text-green-400">بونط <i class="fas fa-thumbs-up"></i></span>' :
+                        '<span class="text-red-400">احبنه <i class="fas fa-thumbs-down"></i></span>'
+                    }
+                            </p>
+                        </div>
+                        <p class="text-center text-sm text-gray-400 mb-2">
+                            <i class="fas fa-hourglass-half"></i> ${timeLeft}
+                        </p>
                     ` : `
                         <div class="flex gap-2 mb-3">
-                            <button onclick="Vote.cast('${v.id}', 'with')" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition">
+                            <button onclick="Vote.cast('${v.id}', 'with')" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition transform hover:scale-105">
                                 بونط <i class="fas fa-thumbs-up"></i>
                             </button>
-                            <button onclick="Vote.cast('${v.id}', 'against')" class="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition">
+                            <button onclick="Vote.cast('${v.id}', 'against')" class="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition transform hover:scale-105">
                                 احبنه <i class="fas fa-thumbs-down"></i>
                             </button>
                         </div>
@@ -174,8 +206,8 @@ const Vote = {
                     `}
                     
                     <div class="flex justify-between text-sm text-gray-300">
-                        <p class="text-green-400">بونط: ${withCount}</p>
-                        <p class="text-red-400">احبنه: ${againstCount}</p>
+                        <p class="text-green-400"><i class="fas fa-thumbs-up"></i> بونط: ${withCount}</p>
+                        <p class="text-red-400"><i class="fas fa-thumbs-down"></i> احبنه: ${againstCount}</p>
                     </div>
                 </div>
             `;
@@ -187,7 +219,7 @@ const Vote = {
      */
     getTimeLeft(endTime) {
         const now = new Date();
-        const end = new Date(endTime);
+        const end = endTime instanceof Date ? endTime : new Date(endTime + 'Z');
         const diff = end - now;
 
         if (diff <= 0) return "انتهى";
@@ -215,7 +247,7 @@ const Vote = {
             .eq("id", voteId)
             .single();
 
-        if (vote && new Date(vote.end_time) < new Date()) {
+        if (vote && new Date(vote.end_time + 'Z') < new Date()) {
             Utils.showMsg("انتهى وقت التصويت!", "red");
             await this.load();
             return;
@@ -230,11 +262,12 @@ const Vote = {
             });
 
         if (error) {
-            Utils.showMsg("لقد صوّت بالفعل!", "red");
+            Utils.showMsg("لقد صوّت بالفعل!", "yellow");
             return;
         }
 
-        Utils.showMsg("تم التصويت بنجاح!", "green");
+        const choiceText = choice === 'with' ? 'بونط' : 'احبنه';
+        Utils.showMsg(`تم التصويت بـ "${choiceText}" بنجاح!`, "green");
         Utils.vibrate(50);
         await this.load();
     },
@@ -252,7 +285,7 @@ const Vote = {
         if (!vote || !vote.target_user_id) return;
 
         // Check if vote has ended
-        if (new Date(vote.end_time) > new Date()) return;
+        if (new Date(vote.end_time + 'Z') > new Date()) return;
 
         const withCount = await this.getCount(voteId, 'with');
         const againstCount = await this.getCount(voteId, 'against');
