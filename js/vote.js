@@ -139,7 +139,12 @@ const Vote = {
 
             const withCount = await this.getCount(v.id, 'with');
             const againstCount = await this.getCount(v.id, 'against');
+            const totalVotes = withCount + againstCount;
             const targetUserName = v.target_user?.name || 'غير معروف';
+
+            // Calculate percentages
+            const withPercent = totalVotes > 0 ? Math.round((withCount / totalVotes) * 100) : 50;
+            const againstPercent = totalVotes > 0 ? Math.round((againstCount / totalVotes) * 100) : 50;
 
             // Check user's vote
             const userVote = await this.getUserVote(v.id, user?.id);
@@ -179,6 +184,22 @@ const Vote = {
                     <p class="text-center text-lg font-bold text-yellow-400 mb-2">
                         <i class="fas fa-hourglass-half"></i> <span id="${timerId}">--:--</span>
                     </p>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mb-3">
+                        <div class="flex h-8 rounded-full overflow-hidden border-2 border-gray-600">
+                            <div class="bg-green-600 flex items-center justify-center text-white font-bold text-sm transition-all duration-500" style="width: ${withPercent}%">
+                                ${withPercent > 15 ? withPercent + '%' : ''}
+                            </div>
+                            <div class="bg-red-600 flex items-center justify-center text-white font-bold text-sm transition-all duration-500" style="width: ${againstPercent}%">
+                                ${againstPercent > 15 ? againstPercent + '%' : ''}
+                            </div>
+                        </div>
+                        <div class="flex justify-between mt-1 text-xs text-gray-400">
+                            <span>بونط</span>
+                            <span>احبنه</span>
+                        </div>
+                    </div>
                     
                     <div class="flex justify-between text-sm text-gray-300">
                         <p class="text-green-400"><i class="fas fa-thumbs-up"></i> بونط: ${withCount}</p>
