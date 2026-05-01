@@ -38,20 +38,42 @@ class SupabaseClient {
 
     // Database helpers
     async getUsers() {
-        const { data } = await this.instance
-            .from('users')
-            .select('*')
-            .order('points', { ascending: false });
-        return data || [];
+        try {
+            const { data, error } = await this.instance
+                .from('users')
+                .select('*')
+                .order('points', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching users:', error);
+                return [];
+            }
+
+            return data || [];
+        } catch (err) {
+            console.error('Exception fetching users:', err);
+            return [];
+        }
     }
 
     async getUserById(userId) {
-        const { data } = await this.instance
-            .from('users')
-            .select('*')
-            .eq('id', userId)
-            .single();
-        return data;
+        try {
+            const { data, error } = await this.instance
+                .from('users')
+                .select('*')
+                .eq('id', userId)
+                .single();
+
+            if (error) {
+                console.error('Error fetching user:', error);
+                return null;
+            }
+
+            return data;
+        } catch (err) {
+            console.error('Exception fetching user:', err);
+            return null;
+        }
     }
 
     async createUser(userData) {

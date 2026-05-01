@@ -34,13 +34,21 @@ const Vote = {
         const titleInput = Utils.$("title");
         const fileInput = Utils.$("file");
         const targetUserSelect = Utils.$("targetUser");
+        const durationInput = Utils.$("voteDuration");
 
         const title = titleInput?.value;
         const file = fileInput?.files[0];
         const targetUserId = targetUserSelect?.value;
+        const duration = parseInt(durationInput?.value) || 10;
 
         if (!title || !file || !targetUserId) {
             Utils.showMsg("الرجاء ملء جميع الحقول واختيار اللاعب المستهدف", "yellow");
+            return;
+        }
+
+        // Validate duration (1 minute to 24 hours)
+        if (duration < 1 || duration > 1440) {
+            Utils.showMsg("مدة التصويت يجب أن تكون بين 1 دقيقة و 24 ساعة", "yellow");
             return;
         }
 
@@ -57,6 +65,9 @@ const Vote = {
             return;
         }
 
+        // Calculate end time based on duration in minutes
+        const endTime = new Date(Date.now() + (duration * 60000));
+
         // Insert vote
         const { error } = await db.instance
             .from("votes")
@@ -66,7 +77,7 @@ const Vote = {
                 image_path: path,
                 created_by: user.id,
                 target_user_id: targetUserId,
-                end_time: new Date(Date.now() + 600000), // 10 minutes
+                end_time: endTime,
                 is_deleted: false
             });
 
@@ -80,6 +91,7 @@ const Vote = {
         titleInput.value = "";
         fileInput.value = "";
         targetUserSelect.value = "";
+        durationInput.value = "10";
         await this.load();
     },
 

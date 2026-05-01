@@ -17,6 +17,7 @@
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/leaderboard.js"></script>
+    <script src="js/index.js"></script>
 </head>
 
 <body class="bg-gradient-to-br from-black via-gray-900 to-black text-white min-h-screen p-6">
@@ -33,7 +34,7 @@
 
     <!-- PROFILE BUTTON (shown when not logged in) -->
     <div id="profileButton" class="fixed top-4 right-4 z-40 hidden">
-        <button onclick="window.location.href='login.html'"
+        <button onclick="showLoginPrompt()"
             class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition">
             <i class="fas fa-user text-xl"></i>
         </button>
@@ -58,6 +59,30 @@
                 class="w-full text-right px-4 py-2 hover:bg-gray-700 transition text-red-400">
                 <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
             </button>
+        </div>
+    </div>
+
+    <!-- LOGIN PROMPT MODAL -->
+    <div id="loginPromptModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-xl max-w-sm w-full mx-4 shadow-2xl border border-gray-700">
+            <h2 class="text-2xl font-bold text-center mb-4">
+                <i class="fas fa-user-circle text-blue-400"></i> تسجيل الدخول
+            </h2>
+            <p class="text-center text-gray-300 mb-6">يجب تسجيل الدخول للوصول إلى الملف الشخصي</p>
+            <div class="space-y-3">
+                <button onclick="window.location.href='login.html'"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition">
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                </button>
+                <button onclick="window.location.href='sign-up.html'"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition">
+                    <i class="fas fa-user-plus"></i> إنشاء حساب جديد
+                </button>
+                <button onclick="closeLoginPrompt()"
+                    class="w-full bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold transition">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+            </div>
         </div>
     </div>
 
@@ -95,59 +120,6 @@
         <h2 class="text-2xl mb-3"><i class="fas fa-list text-blue-400"></i> جميع اللاعبين</h2>
         <div id="leaderboard" class="space-y-2"></div>
     </div>
-
-    <script>
-        // Toggle profile dropdown
-        function toggleProfileMenu() {
-            const dropdown = document.getElementById('profileDropdown');
-            dropdown.classList.toggle('hidden');
-        }
-
-        // Open profile settings (placeholder)
-        function openProfileSettings() {
-            window.location.href = 'profile.html';
-        }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function (event) {
-            const menu = document.getElementById('userProfileMenu');
-            const dropdown = document.getElementById('profileDropdown');
-            if (menu && !menu.contains(event.target)) {
-                dropdown?.classList.add('hidden');
-            }
-        });
-
-        // Page-specific initialization
-        (async function init() {
-            const user = await Auth.requireAuth();
-            if (!user) {
-                // Show login button
-                document.getElementById('profileButton')?.classList.remove('hidden');
-                return;
-            }
-
-            // Show user profile menu
-            const userData = await db.getUserById(user.id);
-            if (userData) {
-                const profileMenu = document.getElementById('userProfileMenu');
-                const headerAvatar = document.getElementById('headerAvatar');
-                const dropdownName = document.getElementById('dropdownName');
-                const dropdownPoints = document.getElementById('dropdownPoints');
-
-                if (profileMenu) profileMenu.classList.remove('hidden');
-                if (headerAvatar) headerAvatar.src = Leaderboard.getAvatar(userData.name);
-                if (dropdownName) dropdownName.textContent = userData.name;
-                if (dropdownPoints) dropdownPoints.textContent = `${userData.points} نقطة`;
-            }
-
-            await Leaderboard.load();
-            await Leaderboard.loadUserBox(user);
-
-            // Hide loader
-            const loader = document.getElementById('loader');
-            if (loader) loader.classList.add('hidden');
-        })();
-    </script>
 
 </body>
 
